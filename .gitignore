@@ -38,11 +38,13 @@ data/live/*.sqlite
 data/live/*.db
 !data/**/.gitkeep
 
-# Trained Model Binaries
-models/*.joblib
-models/*.pkl
-models/*.json
+# Model Artifacts (allow serialized binaries and metadata for instant dashboard launch)
+!models/*.joblib
+!models/*.json
 !models/.gitkeep
+
+# Local documentation folder (never commit to git)
+doc2/
 
 # Streamlit runtime / local cache
 .streamlit/secrets.toml

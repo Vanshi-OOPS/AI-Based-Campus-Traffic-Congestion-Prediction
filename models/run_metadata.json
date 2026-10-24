@@ -1,0 +1,22 @@
+{
+  "timestamp": "2026-10-24T22:48:26.924320",
+  "random_seed": 42,
+  "data_hash_processed": "ac19393f4bd9551e",
+  "library_versions": {
+    "scikit_learn": "1.9.1",
+    "xgboost": "3.4.1",
+    "shap": "0.54.1",
+    "pandas": "3.1.0",
+    "numpy": "2.5.4",
+    "joblib": "1.6.0"
+  },
+  "config_snapshot": {
+    "num_days": 180,
+    "intervals_per_morning": 25,
+    "base_capacity": 100.0,
+    "queue_weight": 25.0,
+    "ar1_phi": 0.5,
+    "score_low_max": 40.0,
+    "score_moderate_max": 70.0
+  }
+}

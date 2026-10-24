@@ -119,6 +119,21 @@ def score_to_class(score: float) -> str:
     else:
         return "High"
 
+def get_class_index(model: Any, class_name: str = "High") -> int:
+    """Safely get the column index for a given class in model.predict_proba."""
+    classes = None
+    if hasattr(model, "classes_"):
+        classes = list(model.classes_)
+    elif hasattr(model, "named_steps") and "clf" in model.named_steps:
+        clf_step = model.named_steps["clf"]
+        if hasattr(clf_step, "classes_"):
+            classes = list(clf_step.classes_)
+        elif hasattr(clf_step, "estimator") and hasattr(clf_step.estimator, "classes_"):
+            classes = list(clf_step.estimator.classes_)
+    if classes and class_name in classes:
+        return classes.index(class_name)
+    return CONGESTION_CLASSES.index(class_name)
+
 def score_to_speed_ratio(score: float) -> float:
     """Monotone decreasing function of congestion score to simulate TomTom speed ratio."""
     raw = 1.0 - (score / 100.0) * SPEED_RATIO_SLOPE
@@ -141,20 +156,28 @@ WEATHER_ORDINAL_MAP = {
     "Heavy Rain": 3,
 }
 
-# Features allowed for model training
-MODEL_FEATURE_COLS = [
+# Two feature sets: CORE (manual form input) and FULL (timeline with lag features)
+CORE_FEATURE_COLS = [
     "minute_of_window",
     "day_of_week",
-    "is_peak_window",
     "vehicle_count",
-    "rolling_vehicle_avg_15min",
-    "vehicle_surge_rate",
     "weather_ordinal",
     "weather_Cloudy",
     "weather_Rain",
     "weather_Heavy Rain",
     "event_flag",
 ]
+
+FULL_FEATURE_COLS = CORE_FEATURE_COLS + [
+    "rolling_vehicle_avg_15min",
+    "vehicle_surge_rate",
+]
+
+# Legacy alias for backward compatibility
+MODEL_FEATURE_COLS = FULL_FEATURE_COLS
+
+# High-alert recall tuning target on validation (default: 90%)
+ALERT_TARGET_HIGH_RECALL = 0.90
 
 # Columns that represent latent state or target leakage (MUST NEVER BE MODEL FEATURES)
 LEAKAGE_COLS = [

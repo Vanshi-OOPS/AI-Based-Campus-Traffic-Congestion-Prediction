@@ -1,0 +1,45 @@
+{
+  "core_features": [
+    "minute_of_window",
+    "day_of_week",
+    "vehicle_count",
+    "weather_ordinal",
+    "weather_Cloudy",
+    "weather_Rain",
+    "weather_Heavy Rain",
+    "event_flag"
+  ],
+  "full_features": [
+    "minute_of_window",
+    "day_of_week",
+    "vehicle_count",
+    "weather_ordinal",
+    "weather_Cloudy",
+    "weather_Rain",
+    "weather_Heavy Rain",
+    "event_flag",
+    "rolling_vehicle_avg_15min",
+    "vehicle_surge_rate"
+  ],
+  "class_order": [
+    "Low",
+    "Moderate",
+    "High"
+  ],
+  "weather_ordinal_map": {
+    "Clear": 0,
+    "Cloudy": 1,
+    "Rain": 2,
+    "Heavy Rain": 3
+  },
+  "selected_classifier_core": "logistic_regression_CORE",
+  "selected_classifier_full": "logistic_regression_FULL",
+  "selected_regressor_core": "random_forest_CORE",
+  "selected_regressor_full": "xgboost_FULL",
+  "alert_threshold": 0.732,
+  "split_counts": {
+    "train_days": 126,
+    "val_days": 27,
+    "test_days": 27
+  }
+}
