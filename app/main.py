@@ -28,6 +28,9 @@ from app.components.factor_chart import (
     render_classifier_probability_chart,
 )
 from app.components.provenance import render_provenance_panel
+from app.components.source_status import determine_status_pill, render_source_status_badges
+from app.components.live_panel import render_live_speed_cross_check, render_live_alert_banner
+from app.components.live_feed import fetch_live_feed_cached
 
 
 def main() -> None:
@@ -39,22 +42,51 @@ def main() -> None:
         initial_sidebar_state="expanded",
     )
 
-    # 2. Header & Status Banners
+    # 2. Header & Live Mode Configuration
     st.title(f"🚦 {cfg.APP_TITLE}")
     st.markdown(f"*{cfg.APP_SUBTITLE}*")
 
     h_col1, h_col2, h_col3 = st.columns([2, 2, 2])
+    with h_col3:
+        live_mode = st.toggle(
+            "Live Traffic & Weather Feed",
+            value=st.session_state.get("live_mode", False),
+            key="live_mode_toggle",
+            help="Ingest real feeds from TomTom and Open-Meteo into dashboard.",
+        )
+        st.session_state["live_mode"] = live_mode
+
+    live_data = None
+    if live_mode:
+        demo_mock_override = st.sidebar.checkbox(
+            "Demo Feed (Mock Override)",
+            value=False,
+            help="Force deterministic mock demo feed instead of real APIs.",
+        )
+        if st.sidebar.button("🔄 Refresh Live Feeds", help="Fetch fresh observations from APIs."):
+            st.session_state["cache_bust"] = st.session_state.get("cache_bust", 0) + 1
+
+        live_data = fetch_live_feed_cached(
+            query_lat=cfg.PINNED_QUERY_LAT,
+            query_lon=cfg.PINNED_QUERY_LON,
+            use_mock=demo_mock_override,
+            cache_bust_key=st.session_state.get("cache_bust", 0),
+        )
+        status_pill_text = determine_status_pill(
+            live_data.get("traffic_source", "unavailable"),
+            live_data.get("weather_source", "unavailable"),
+        )
+        env_badge = status_pill_text
+    else:
+        env_badge = cfg.APP_STATUS_PILL
+
     with h_col1:
-        st.info(f"**Environment:** `{cfg.APP_STATUS_PILL}`")
+        st.info(f"**Environment:** `{env_badge}`")
     with h_col2:
         st.info(f"**Monitoring Window:** `{cfg.MONITORING_WINDOW_LABEL}`")
-    with h_col3:
-        st.toggle(
-            "Live Traffic & Weather Feed",
-            value=False,
-            disabled=True,
-            help=cfg.LIVE_TOGGLE_DISABLED_LABEL,
-        )
+
+    if live_mode and live_data is not None:
+        render_source_status_badges(live_data)
 
     # 3. Load Model Artifacts
     try:
@@ -129,12 +161,30 @@ def main() -> None:
             )
 
             # Weather Condition
+            weather_idx = 0
+            auto_filled_weather = False
+            if live_mode and live_data is not None:
+                live_cat = live_data.get("weather_category")
+                if live_cat in cfg.WEATHER_CATEGORIES:
+                    weather_idx = cfg.WEATHER_CATEGORIES.index(live_cat)
+                    auto_filled_weather = True
+                elif live_cat == "Other/Unknown":
+                    st.info(
+                        f"ℹ️ Open-Meteo returned WMO code {live_data.get('wmo_code')} "
+                        f"(unmapped/rare condition). Weather remains manual operator selection."
+                    )
+
             selected_weather = st.selectbox(
                 "Weather Condition",
                 options=cfg.WEATHER_CATEGORIES,
-                index=0,
+                index=weather_idx,
                 help="Ambient weather affecting pavement friction and driver speeds",
             )
+            if auto_filled_weather:
+                st.caption(
+                    f"⚡ Auto-filled from Open-Meteo live estimate "
+                    f"({live_data.get('weather_category')}, WMO {live_data.get('wmo_code')}). You can override manually."
+                )
 
             # Campus Event Flag
             selected_event = st.checkbox(
@@ -186,16 +236,19 @@ def main() -> None:
             )
 
             # 1. Operational Alert Banner
+            if live_mode and live_data is not None:
+                render_live_alert_banner(live_data)
+
             b_type = alert_res["banner_type"]
             msg = alert_res["banner_message"]
             if b_type == "error":
-                st.error(f"🚨 **{alert_res['alert_level'].upper()} CONGESTION ALERT**\n\n{msg}")
+                st.error(f"🚨 **{alert_res['alert_level'].upper()} CONGESTION ALERT (ML Model)**\n\n{msg}")
                 if alert_res["diversion_route_note"]:
                     st.info(alert_res["diversion_route_note"])
             elif b_type == "warning":
-                st.warning(f"⚠️ **{alert_res['alert_level'].upper()} ADVISORY**\n\n{msg}")
+                st.warning(f"⚠️ **{alert_res['alert_level'].upper()} ADVISORY (ML Model)**\n\n{msg}")
             else:
-                st.success(f"✅ **{alert_res['alert_level'].upper()} TRAFFIC FLOW**\n\n{msg}")
+                st.success(f"✅ **{alert_res['alert_level'].upper()} TRAFFIC FLOW (ML Model)**\n\n{msg}")
 
             if alert_res["disagreement_note"]:
                 st.caption(f"ℹ️ {alert_res['disagreement_note']}")
@@ -221,12 +274,23 @@ def main() -> None:
                     help=cfg.SPEED_RATIO_DISCLAIMER,
                 )
 
+            # Optional Live Speed Cross-Check Panel (Live Mode Only)
+            if live_mode and live_data is not None:
+                st.markdown("---")
+                render_live_speed_cross_check(live_data, ml_pred_class=pred_class)
+                st.markdown("---")
+
             # 3. Folium Map & Factor Chart Side-by-Side
             sub_col_map, sub_col_chart = st.columns([1, 1], gap="medium")
 
             with sub_col_map:
                 st.markdown("##### Road Segment Geospatial Mock-up")
-                st.caption(cfg.MAP_CAPTION)
+                map_caption = (
+                    "Colored by speed-based rule, not the ML model. Illustrative road segment mock-up."
+                    if live_mode
+                    else cfg.MAP_CAPTION
+                )
+                st.caption(map_caption)
                 try:
                     seg_map = create_segment_map(
                         predicted_class=alert_res["alert_level"],
@@ -234,6 +298,8 @@ def main() -> None:
                         vehicle_count=selected_count,
                         weather=selected_weather,
                         minute_of_window=selected_minute,
+                        live_mode=live_mode,
+                        live_index_class=live_data.get("live_index_class") if (live_mode and live_data) else None,
                     )
                     render_map_component(seg_map, width=380, height=320)
                 except Exception as map_err:
@@ -258,8 +324,9 @@ def main() -> None:
             render_provenance_panel(
                 run_metadata=run_metadata,
                 feature_meta=feature_meta,
-                input_source="Manual Form Input (CORE)",
+                input_source="Hybrid (Manual Gate Volume + Open-Meteo Weather)" if live_mode else "Manual Form Input (CORE)",
                 model_key=feature_meta.get("selected_classifier_core", "logistic_regression_CORE"),
+                live_feed_data=live_data if live_mode else None,
             )
 
     # -------------------------------------------------------------------------
@@ -560,6 +627,14 @@ def main() -> None:
             {"Role": "Live Weather (Phase 4)", "Tool": "Open-Meteo API", "Cost Tier": "Free (No Key Required)"},
         ]
         st.dataframe(pd.DataFrame(stack_data), use_container_width=True, hide_index=True)
+
+        st.markdown("""
+        #### Phase 4 Hybrid Live Mode Architecture
+        - **Speed Rule vs. ML Model Separation:** Live traffic APIs provide corridor speeds, travel times, and delay signals—not gate vehicle counts. Consequently, live mode does *not* feed live speeds into the Phase 2 ML classifier. The ML model continues to evaluate scenario arrivals, while the separate **Live Speed Cross-Check** displays the corridor velocity signal.
+        - **Corridor Scope:** Traffic telemetry represents a regional 13.5 km arterial trunk segment passing near the gate (`FRC2`), not a sensor directly installed on the gate.
+        - **Attribution:** Speeds reported by TomTom; meteorological estimates provided by Open-Meteo under CC BY 4.0.
+        - Full specifications available in [docs/phase4_live_track.md](file:///d:/disk%20d/project/Smart%20Traffic%20Congestion%20Alert/docs/phase4_live_track.md).
+        """)
 
         st.markdown("For full column descriptions and mathematical derivations, see [docs/data_dictionary.md](file:///d:/disk%20d/project/Smart%20Traffic%20Congestion%20Alert/docs/data_dictionary.md).")
 

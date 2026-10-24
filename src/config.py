@@ -221,11 +221,36 @@ SPEED_RATIO_DISCLAIMER = "Simulated estimate derived from the score, not a measu
 SHAP_CHART_DISCLAIMER = "Model attribution in points of congestion score, not a physical cause."
 DISAGREEMENT_NOTE = "Note: Continuous score ({score:.1f}) and categorical class ({cls}) reflect proximity to the decision boundary."
 
-# Campus & Segment Geography (Placeholder until field-verified)
-CAMPUS_NAME = "College Main Gate Segment (Placeholder)"
-GATE_COORDINATES = (12.9698, 79.1559)
+# Campus & Segment Geography
+CAMPUS_NAME = "College Main Gate Segment (Field Verified)"
+GATE_COORDINATES = (12.9692232, 79.1559336)
+PINNED_QUERY_LAT = 12.9683232  # 100m South, Eastbound inbound approach carriageway
+PINNED_QUERY_LON = 79.1559336
+EXPECTED_SEGMENT_FINGERPRINT = "12.9660,79.1373->12.9968,79.2455:13519"
 ROAD_SEGMENT_POINTS = [
     (12.9675, 79.1530),  # Illustrative approach road start
-    (12.9698, 79.1559),  # Main Campus Gate
+    (12.9692232, 79.1559336),  # Main Campus Gate (Field Verified)
     (12.9715, 79.1585),  # Inner perimeter road
 ]
+
+# -----------------------------------------------------------------------------
+# Phase 4 Live API & Collector Parameters
+# -----------------------------------------------------------------------------
+LIVE_DATA_PATH = DATA_LIVE_DIR / "traffic_weather_live.csv"
+MOCK_DATA_PATH = DATA_LIVE_DIR / "mock_feed_demo.csv"
+
+# Provider Quotas & Rate Limits (Official Documentation)
+TOMTOM_DAILY_QUOTA_LIMIT = 2500  # Free evaluation tier: 2,500 non-tile requests/day
+OPEN_METEO_DAILY_QUOTA_LIMIT = 10000  # Free non-commercial tier
+
+# Quality & Classification Thresholds (Assumptions)
+TOMTOM_MIN_CONFIDENCE = 0.50  # Flag readings with confidence < 0.50
+HEAVY_RAIN_PRECIP_THRESHOLD_MM = 5.0  # Precipitation rate >= 5.0 mm/interval qualifies as Heavy Rain
+LIVE_INDEX_LOW_MAX = 40.0  # Provisional cutoff for speed index
+LIVE_INDEX_MODERATE_MAX = 70.0  # Provisional cutoff for speed index
+
+# Freshness & Caching Settings
+CACHE_TTL_SECONDS = 300  # 5 minutes Streamlit cache TTL
+STALENESS_THRESHOLD_MINUTES = 15  # Mark reading stale if older than 15 minutes
+LOCAL_TIMEZONE_STR = "Asia/Kolkata"
+
