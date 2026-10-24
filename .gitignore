@@ -32,9 +32,7 @@ ENV/
 *.env
 *.key
 
-# Data files (keep directory structure via .gitkeep, ignore generated datasets)
-data/raw/*.csv
-data/processed/*.csv
+# Data files: allow raw and processed CSVs for reproducibility; ignore live logs
 data/live/*.csv
 data/live/*.sqlite
 data/live/*.db
