@@ -66,7 +66,8 @@ def compute_morning_lag_features(group: pd.DataFrame) -> pd.DataFrame:
 
     # 15-minute forward forecast target (shift -3 steps within the morning)
     # The last 3 rows (intervals 22, 23, 24) receive NaN as t+15min falls outside the window
-    group["congestion_class_t_plus_15min"] = group["congestion_class"].shift(-3)
+    if "congestion_class" in group.columns:
+        group["congestion_class_t_plus_15min"] = group["congestion_class"].shift(-3)
 
     return group
 

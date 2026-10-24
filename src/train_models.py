@@ -192,7 +192,7 @@ def build_regressor_pipeline(
 
 
 class ColumnSelector(BaseEstimator, TransformerMixin):
-    """Selects specific columns from a DataFrame."""
+    """Selects specific columns from a DataFrame, filling missing lag columns with fallback."""
 
     def __init__(self, columns: List[str]) -> None:
         self.columns = columns
@@ -201,7 +201,16 @@ class ColumnSelector(BaseEstimator, TransformerMixin):
         return self
 
     def transform(self, X: pd.DataFrame) -> pd.DataFrame:
-        return X[self.columns].copy()
+        df = X.copy()
+        for c in self.columns:
+            if c not in df.columns:
+                if c == "rolling_vehicle_avg_15min":
+                    df[c] = df.get("vehicle_count", 35.0)
+                elif c == "vehicle_surge_rate":
+                    df[c] = 0.0
+                else:
+                    df[c] = 0.0
+        return df[self.columns].copy()
 
 
 class XGBoostClassWrapper(BaseEstimator):

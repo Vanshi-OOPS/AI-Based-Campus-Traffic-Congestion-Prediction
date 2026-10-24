@@ -77,7 +77,7 @@ class TrafficExplainer:
         pipe = reg_pipeline or clf_pipeline
         if hasattr(pipe, "named_steps"):
             step = pipe.named_steps.get("reg") or pipe.named_steps.get("clf")
-            if hasattr(step, "estimator"):  # XGBoostClassWrapper
+            if type(step).__name__ == "XGBoostClassWrapper":
                 return step.estimator
             return step
         return pipe
@@ -94,6 +94,17 @@ class TrafficExplainer:
                 df["weather_Rain"] = (df["weather"] == "Rain").astype(int)
             if "weather_Heavy Rain" not in df.columns:
                 df["weather_Heavy Rain"] = (df["weather"] == "Heavy Rain").astype(int)
+
+        # Fallback for lag features when input is from manual CORE form
+        for col in self.feature_cols:
+            if col not in df.columns:
+                if col == "rolling_vehicle_avg_15min":
+                    df[col] = df.get("vehicle_count", 35.0)
+                elif col == "vehicle_surge_rate":
+                    df[col] = 0.0
+                else:
+                    df[col] = 0.0
+
         return df[self.feature_cols].copy()
 
     def explain_prediction(
@@ -127,7 +138,7 @@ class TrafficExplainer:
             exp_res = self.reg_explainer(transformed_df)
             shap_vals = exp_res.values[0]
             base_val = float(exp_res.base_values[0])
-            pred_val = float(self.reg_pipe.predict(input_df)[0])
+            pred_val = float(self.reg_model.predict(transformed_df)[0])
             units = "points of congestion score"
         elif mode == "classifier":
             exp_res = self.clf_explainer(transformed_df)
@@ -141,7 +152,11 @@ class TrafficExplainer:
             else:
                 shap_vals = exp_res.values[0]
                 base_val = float(exp_res.base_values[0])
-            probs = self.clf_pipe.predict_proba(input_df)[0]
+            
+            if hasattr(self.clf_model, "predict_proba"):
+                probs = self.clf_model.predict_proba(transformed_df)[0]
+            else:
+                probs = self.clf_pipe.predict_proba(transformed_df)[0]
             pred_val = float(probs[high_idx])
             units = "effect on probability of High"
         else:

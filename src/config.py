@@ -199,3 +199,33 @@ METADATA_COLS = [
     "split",
     "data_source",
 ]
+
+# -----------------------------------------------------------------------------
+# UI & Dashboard Configuration Strings
+# -----------------------------------------------------------------------------
+APP_TITLE = "Smart Campus Traffic Congestion Alert Dashboard"
+APP_SUBTITLE = "Prototype Congestion Prediction & Alert System for Campus Gate Transit"
+APP_STATUS_PILL = "Mode: Simulated Prototype"
+MONITORING_WINDOW_LABEL = "08:00 AM – 10:00 AM, Main Gate segment"
+LIVE_TOGGLE_DISABLED_LABEL = "Live mode: not implemented (Phase 4)"
+
+# Operational Alert Messages
+ALERT_MSG_HIGH = "High congestion predicted at the Main Gate. Consider activating the approved traffic-management procedure."
+ALERT_MSG_MODERATE = "Moderate congestion predicted. Allow additional travel time."
+ALERT_MSG_LOW = "Low congestion predicted. Continue normal monitoring."
+DEFAULT_DIVERSION_ROUTE_EXAMPLE = "Divert incoming campus transit to North Perimeter Gate via Link Road (example, confirm with the college)."
+
+# UI Disclaimers & Captions
+MAP_CAPTION = "Mock-up: segment colored by model prediction, not live traffic."
+SPEED_RATIO_DISCLAIMER = "Simulated estimate derived from the score, not a measured speed."
+SHAP_CHART_DISCLAIMER = "Model attribution in points of congestion score, not a physical cause."
+DISAGREEMENT_NOTE = "Note: Continuous score ({score:.1f}) and categorical class ({cls}) reflect proximity to the decision boundary."
+
+# Campus & Segment Geography (Placeholder until field-verified)
+CAMPUS_NAME = "College Main Gate Segment (Placeholder)"
+GATE_COORDINATES = (12.9698, 79.1559)
+ROAD_SEGMENT_POINTS = [
+    (12.9675, 79.1530),  # Illustrative approach road start
+    (12.9698, 79.1559),  # Main Campus Gate
+    (12.9715, 79.1585),  # Inner perimeter road
+]
